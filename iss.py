@@ -16,17 +16,3 @@ def get_next_passes(lat, lng, n=5):
 
     return response
 
-
-# def mock():
-#     import datetime, time
-
-#     data = []
-
-#     for i in range(0, 25, 5):
-#         dt = datetime.datetime.now() + datetime.timedelta(seconds=5 + i)
-#         data.append({
-#             'duration': '2',
-#             'risetime': time.mktime(dt.timetuple())
-#         })
-
-#     return data

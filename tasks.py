@@ -29,14 +29,10 @@ def alert(data):
 def check():
 
     if huey.scheduled():
-        logger.info("No ISS passes scheduled.")
+        logger.info("ISS passes already scheduled")
         return
 
     next_passes = iss.get_next_passes(settings.LAT, settings.LNG)
-    #next_passes = iss.mock()
-    
-    if not next_passes:
-        return
 
     for next_pass in next_passes:
         risetime = next_pass['risetime']

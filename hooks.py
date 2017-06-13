@@ -12,7 +12,9 @@ class HookManager:
     def __init__(self):
         self.hooks = set()
         self.dirname = 'modules'
-
+        self.load_modules()
+    
+    def load_modules(self):
         for filename in os.listdir(self.dirname):
             if filename.endswith('.py'):
                 path = os.path.join(self.dirname, filename)

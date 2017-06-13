@@ -21,8 +21,8 @@ class HookManager:
                 self.hooks.add(hook)
 
     def trigger(self, event, *args, **kwargs):
-        for sub in self.hooks:
-            callback = getattr(sub, event, None)
+        for hook in self.hooks:
+            callback = getattr(hook, event, None)
             if callback:
                 t = threading.Thread(target=callback, args=args, kwargs=kwargs)
                 t.start()

@@ -5,24 +5,34 @@ from datetime import datetime, timedelta
 from huey import crontab
 
 import iss
-from config import huey, hooks
+import settings
+
+from main import huey, hooks
 
 logger = logging.getLogger(__name__)
 
 
 @huey.task()
 def alert(data):
-    logger.info("ISS pass!")
-    hooks.trigger('on_pass', data['duration'])
+
+    risetime = datetime.fromtimestamp(data['risetime'])
+    threshold = timedelta(seconds=data['duration'])
+
+    if datetime.now() < risetime + threshold:
+        logger.info("ISS above!")
+        hooks.trigger('on_pass', data['duration'])
+    else:
+        logger.info("Missed ISS alert at %s" % risetime)
 
 
-@huey.periodic_task(crontab(minute='*/10'))
-def check_next_pass():
+@huey.periodic_task(crontab(minute=settings.CHECK_INTERVAL_MINUTES))
+def check():
 
     if huey.scheduled():
+        logger.info("No ISS passes scheduled.")
         return
 
-    next_passes = iss.get_next_pass('-34.9058', '-57.9560')
+    next_passes = iss.get_next_passes(settings.LAT, settings.LNG)
     #next_passes = iss.mock()
     
     if not next_passes:

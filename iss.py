@@ -1,14 +1,16 @@
-import logging
 import requests
-
 
 API_HOST = 'http://api.open-notify.org/iss-pass.json'
 
-logger = logging.getLogger(__name__)
 
+def get_next_passes(lat, lng, n=5):
 
-def get_next_pass(lat, lng):
-    params = {'lat': lat, 'lon': lng}
+    params = {
+        'lat': lat, 
+        'lon': lng, 
+        'n': n
+    }
+
     data = requests.get(API_HOST, params=params).json()
     response = data.get('response')
 

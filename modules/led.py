@@ -13,7 +13,7 @@ class Hook:
         self.comm = serial.Serial('/dev/arduino')
 
     def on_pass(self, data):
-        now = datetime.now()
+        now = datetime.utcnow()
         duration = data['end']['datetime'] - now
         self.prender()
         time.sleep(duration.seconds)

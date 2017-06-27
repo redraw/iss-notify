@@ -14,12 +14,8 @@ class SatID:
 
 
 class HeavensAbove:
-    """UNOFFICIAL
-    Hey! this data should be available somewhere in the world?
-    """
-
     BASE_URL = "http://heavens-above.com"
-    URL_PASSES = "{}/PassSummary.aspx".format(BASE_URL)
+    PASSES_URL = "{}/PassSummary.aspx".format(BASE_URL)
 
     PassRow = namedtuple('PassRow', [
         'date',
@@ -43,12 +39,12 @@ class HeavensAbove:
 
     def get_next_passes(self, *args, **kwargs):
         passes = self.get_passes(*args, **kwargs)
-        now = datetime.now()
+        now = datetime.utcnow()
 
         return filter(lambda p: p['start']['datetime'] > now, passes)
 
     def get_passes(self, satid=SatID.ISS):
-        response = self.session.get(HeavensAbove.URL_PASSES, params={
+        response = self.session.get(HeavensAbove.PASSES_URL, params={
             'satid': satid,
             'lat': self.lat,
             'lng': self.lng
@@ -64,7 +60,7 @@ class HeavensAbove:
         dom = BeautifulSoup(html, 'html.parser')
 
         for tr in dom.select('tr.clickableRow'):
-            p = HeavensAbove.PassRow(*[td.string for td in tr.children])
+            p = HeavensAbove.PassRow(*[unicode(td.string) for td in tr.children])
 
             link = self._get_pass_link(tr)
             year = self._get_pass_year(link)

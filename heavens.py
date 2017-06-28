@@ -43,7 +43,7 @@ class HeavensAbove:
 
     def get_next_passes(self, *args, **kwargs):
         passes = self.get_passes(*args, **kwargs)
-        now = datetime.now()
+        now = datetime.utcnow()
 
         return filter(lambda p: p['start']['datetime'] > now, passes)
 
@@ -64,7 +64,7 @@ class HeavensAbove:
         dom = BeautifulSoup(html, 'html.parser')
 
         for tr in dom.select('tr.clickableRow'):
-            p = HeavensAbove.PassRow(*[td.string for td in tr.children])
+            p = HeavensAbove.PassRow(*[unicode(td.string) for td in tr.children])
 
             link = self._get_pass_link(tr)
             year = self._get_pass_year(link)

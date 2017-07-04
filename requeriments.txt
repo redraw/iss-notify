@@ -1,1 +1,4 @@
 huey
+requests
+pyephem
+redis

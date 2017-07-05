@@ -118,23 +118,26 @@ class TLECalculator():
             azm_centered = azimuth - ephem.pi/8
             return octants[floor(16*azm_centered/ephem.pi)]
 
+        def rad_to_deg(radians):
+            return 360*rad / ( 2*ephem.pi )
+
         def format_pass(_pass):
             return {
                 'url': None,
                 'mag': _pass.mag,
                 'start'{
                     'datetime': _pass.start_time,
-                    'alt': _pass.start_alt,
+                    'alt': rad_to_deg(_pass.start_alt),
                     'az': az_to_octant(_pass.start_az)
                 },
                 'highest'{
                     'datetime': _pass.highest_time,
-                    'alt': _pass.highest_alt,
+                    'alt': rad_to_deg(_pass.highest_alt),
                     'az': az_to_octant(_pass.highest_az)
                 },
                 'end'{
                     'datetime': _pass.end_time,
-                    'alt': _pass.end_alt,
+                    'alt': rad_to_deg(_pass.end_alt),
                     'az': az_to_octant(_pass.end_az)
                 }
             }

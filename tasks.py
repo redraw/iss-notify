@@ -8,6 +8,7 @@ from huey import crontab
 import settings
 from main import huey, hooks
 from heavens import HeavensAbove
+from tle import TLECalculator
 
 logger = logging.getLogger(__name__)
 
@@ -27,8 +28,11 @@ def check():
        logger.info("ISS passes already scheduled")
        return
 
-    ha = HeavensAbove(settings.LAT, settings.LNG)
-
-    for next_pass in ha.get_next_passes():
+    if settings.USE_HEAVENS_ABOVE:
+        calculator = HeavensAbove(settings.LAT, settings.LNG)
+    else:
+        calculator = TLECalculator(settings.LAT, settings.LNG)
+        
+    for next_pass in calculator.get_next_passes():
         eta = next_pass['start']['datetime'].replace(tzinfo=utc)
         alert.schedule(args=[next_pass], eta=eta)

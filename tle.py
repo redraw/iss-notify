@@ -100,3 +100,30 @@ class TLECalculator():
         logger.debug("Correctly calculated a pass! {}".format(_pass))
 
         return _pass
+
+    def get_next_passes():
+        passes = [self._calculate_pass()]
+        for _ in range(9):
+            passes.append(self._calculate_pass(passes[-1]))
+        
+        def format_pass(_pass):
+            return {
+                'url': None,
+                'mag': _pass.mag,
+                'start'{
+                    'datetime': _pass.start_time,
+                    'alt': _pass.start_alt,
+                    'az': _pass.start_az
+                },
+                'highest'{
+                    'datetime': _pass.highest_time,
+                    'alt': _pass.highest_alt,
+                    'az': _pass.highest_az
+                },
+                'end'{
+                    'datetime': _pass.end_time,
+                    'alt': _pass.end_alt,
+                    'az': _pass.end_az
+                }
+            }
+        return passes

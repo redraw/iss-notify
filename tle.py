@@ -2,6 +2,8 @@ import ephem
 import requests
 import logging
 
+from math import floor
+
 from heavens import HeavensAbove as HA, SatID
 
 logger = logging.getLogger(__name__)
@@ -105,7 +107,17 @@ class TLECalculator():
         passes = [self._calculate_pass()]
         for _ in range(9):
             passes.append(self._calculate_pass(passes[-1]))
-        
+
+        def az_to_octant(azimuth):
+            octants = [
+                'N', 'NE', 'E',
+                'SE', 'S', 'SW',
+                'W', 'NW'
+            ]
+
+            azm_centered = azimuth - ephem.pi/8
+            return octants[floor(16*azm_centered/ephem.pi)]
+
         def format_pass(_pass):
             return {
                 'url': None,
@@ -113,17 +125,18 @@ class TLECalculator():
                 'start'{
                     'datetime': _pass.start_time,
                     'alt': _pass.start_alt,
-                    'az': _pass.start_az
+                    'az': az_to_octant(_pass.start_az)
                 },
                 'highest'{
                     'datetime': _pass.highest_time,
                     'alt': _pass.highest_alt,
-                    'az': _pass.highest_az
+                    'az': az_to_octant(_pass.highest_az)
                 },
                 'end'{
                     'datetime': _pass.end_time,
                     'alt': _pass.end_alt,
-                    'az': _pass.end_az
+                    'az': az_to_octant(_pass.end_az)
                 }
             }
-        return passes
+
+        return map(format_pass, passes)

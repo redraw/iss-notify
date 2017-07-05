@@ -43,7 +43,7 @@ class TLECalculator():
 
         start_time = rise_time
         
-        self.satellite.compute(raise_time)
+        self.satellite.compute(rise_time)
         
         # we need light to hit the satellite
         while self.satellite.eclipsed and not start_time > set_time:
@@ -52,7 +52,7 @@ class TLECalculator():
         
         # we should be done
         # if the sat is eclipsed the whole time, there is no pass
-        if start_time = set_time:
+        if start_time == set_time:
             return None
 
         end_time = start_time

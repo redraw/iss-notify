@@ -16,6 +16,7 @@ class SatID:
 class HeavensAbove:
     BASE_URL = "http://heavens-above.com"
     PASSES_URL = "{}/PassSummary.aspx".format(BASE_URL)
+    ORBIT_URL = "{}/orbit.aspx".format(BASE_URL)
 
     PassRow = namedtuple('PassRow', [
         'date',
@@ -42,6 +43,17 @@ class HeavensAbove:
         now = datetime.utcnow()
 
         return filter(lambda p: p['start']['datetime'] > now, passes)
+
+    @staticmethod
+    def get_tle(satid=SatID.ISS):
+        response = self.session.get(HeavensAbove.ORBIT_URL, params={
+            'satId': satid
+        })
+
+        tle = self._parse_tle(response.text)
+
+        # tle must be 3 lines, HA gives us only two
+        return ['{}'.format(satid)] + tle
 
     def get_passes(self, satid=SatID.ISS):
         response = self.session.get(HeavensAbove.PASSES_URL, params={
@@ -86,6 +98,12 @@ class HeavensAbove:
             })
 
         return passes
+
+    def _parse_tle(self, html):
+        soup = BeautifulSoup(html, 'html.parser')
+        return [
+            el.string for el in soup.select(span) if el.id.startswith('ct100')
+        ]
 
     def _get_pass_link(self, tr):
         return re.match(r"window.location='(.*)'", tr.attrs['onclick']).group(1)

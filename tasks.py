@@ -31,7 +31,10 @@ def check():
     if huey.scheduled():
         return
 
-    next_passes = iss.get_next_passes(settings.LAT, settings.LNG)
+    next_passes = iss.get_next_passes(
+        settings.LAT, settings.LNG,
+        visible_only=settings.VISIBLE_ONLY
+    )
 
     for next_pass in next_passes:
         risetime = next_pass['risetime']
@@ -42,16 +45,15 @@ def check():
 interval = crontab(hour=settings.TLE_INTERVAL_HOURS)
 @huey.periodic_task(interval)
 def update_tle():
+    logger.info("Updating TLE")
+
     r = requests.get('http://www.celestrak.com/NORAD/elements/stations.txt')
-    lines = [line.strip() for line in r.text.split('\n') if line]
+    lines = [line for line in r.text.split('\n') if line]
 
     stations = []
 
     for i in range(0, len(lines), 3):
         stations.append(lines[i:i+3])
-
-    with open('stations.json', 'w') as f:
-        json.dump(stations, f, indent=4)
 
     iss = stations[0]
     redis.set('iss:tle', json.dumps(iss))

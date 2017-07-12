@@ -2,9 +2,9 @@ import re
 from datetime import datetime, timedelta
 
 import requests
+from six.moves.urllib.parse import parse_qs
 from collections import namedtuple
 from bs4 import BeautifulSoup
-from urlparse import parse_qs
 
 from utils import julian
 
@@ -14,10 +14,6 @@ class SatID:
 
 
 class HeavensAbove:
-    """UNOFFICIAL
-    Hey! this data should be available somewhere in the world?
-    """
-
     BASE_URL = "http://heavens-above.com"
     URL_PASSES = "{}/PassSummary.aspx".format(BASE_URL)
 

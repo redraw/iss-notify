@@ -1,5 +1,7 @@
-from huey import RedisHuey
-from hooks import HookManager
+import settings
 
-huey = RedisHuey('iss')
-hooks = HookManager()
+from huey import RedisHuey
+from redis import StrictRedis
+
+huey = RedisHuey('iss', **settings.REDIS_CONF)
+redis = StrictRedis(**settings.REDIS_CONF)

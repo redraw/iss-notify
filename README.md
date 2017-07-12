@@ -1,10 +1,21 @@
 🛰
 
 1. `pip install requeriments.txt`
+2. Set your `.env` (example in `.env.example`)
 2. `huey_consumer tasks.huey`
 
-##### Hooks
-Add your module inside `modules` folder, your module should be called `Hook` and should implement the `on_pass` callback
+#### Desktop notifications using `notify-send`
+There's an example inside `modules/notify_send.py` to recieve desktop notifications.
+Make sure to set up `DBUS_SESSION_BUS_ADDRESS` in your `.env` before running the worker.
+From terminal you can add it by running,
+
+```
+$ env | grep DBUS >> .env
+```
+
+
+#### Hooks
+Add your hook inside `modules` folder, the module class should be called `Hook` and should implement the `on_pass` callback.
 
 ```python
 # /path/to/iss-notify/modules/example.py
@@ -18,7 +29,6 @@ class Hook:
          'highest': {'alt': u'33\xb0',
            'az': u'SW',
            'datetime': datetime.datetime(2017, 6, 29, 22, 31, 8)},
-          'mag': u'-2.5',
          'start': {'alt': u'10\xb0',
            'az': u'WNW',
            'datetime': datetime.datetime(2017, 6, 29, 22, 28, 4)}}
@@ -26,7 +36,7 @@ class Hook:
         pass
 ```
 
-##### Supervisor
+#### Supervisor
 ```
 # /etc/supervisor/conf.d/iss.conf
 

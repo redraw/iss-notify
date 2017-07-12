@@ -8,7 +8,7 @@ from huey import crontab
 import settings
 from main import huey, hooks
 from heavens import HeavensAbove
-from tle import TLECalculator
+from tle import SatTracker, TLE
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +22,8 @@ def alert(data):
         logger.info("Missed ISS alert at %s" % data['start']['datetime'])
 
 
-@huey.periodic_task(crontab(minute=settings.CHECK_INTERVAL_MINUTES))
+interval = crontab(minute=settings.CHECK_INTERVAL_MINUTES)
+@huey.periodic_task(interval)
 def check():
     if huey.scheduled():
        logger.info("ISS passes already scheduled")
@@ -31,8 +32,19 @@ def check():
     if settings.USE_HEAVENS_ABOVE:
         calculator = HeavensAbove(settings.LAT, settings.LNG)
     else:
-        calculator = TLECalculator(settings.LAT, settings.LNG)
-        
-    for next_pass in calculator.get_next_passes():
+        calculator = SatTracker(settings.LAT, settings.LNG)
+
+    for next_pass in calculator.get_next_passes(visible_only=True):
         eta = next_pass['start']['datetime'].replace(tzinfo=utc)
         alert.schedule(args=[next_pass], eta=eta)
+
+
+interval = crontab(hour=settings.TLE_UPDATE_INTERVAL_HOURS)
+@huey.periodic_task(interval)
+def update_tle():
+    logger.info("Updating TLE...")
+    TLE().update()
+
+
+# update at startup
+#update_tle()

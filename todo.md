@@ -1,0 +1,4 @@
+- [ ] Improve module hooks
+- [ ] Generate star map for the pass, like [this ones](http://www.heavens-above.com/passdetails.aspx?&satid=25544&mjd=57948.9325526597&type=V)
+- [ ] Improve visible pass calculation
+- [ ] Use updated TLE files

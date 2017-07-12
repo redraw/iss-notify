@@ -1,145 +1,153 @@
+import json
 import ephem
-import requests
 import logging
+import requests
 
-from math import floor
-
-from heavens import HeavensAbove as HA, SatID
+from datetime import datetime
+from math import degrees
+from utils import az_to_octant
+from collections import namedtuple
 
 logger = logging.getLogger(__name__)
 
-class TLECalculator():
-    def __init__(self, lat, lon, satellite_id=SatID.ISS):
-        tle = HA.get_tle(satellite_id)
 
-        self.observer = ephem.Observer(lat, lon)
+# testing
+tle = """ISS (ZARYA)
+1 25544U 98067A   17188.54872024  .00016717  00000-0  10270-3 0  9026
+2 25544  51.6424 296.8358 0005125   5.6292 354.4917 15.54172114 24912""".split('\n')
+
+
+EphemPass = namedtuple('EphemPass', [
+    'rise_time',
+    'rise_az',
+    'max_alt_time',
+    'max_alt',
+    'set_time',
+    'set_az'
+])
+
+
+class SatID:
+    ISS = 25544
+
+
+class SatTracker(object):
+
+    def __init__(self, lat, lon, horizon='10', satid=SatID.ISS):
+        #tle = HA.get_tle(satid)
+
+        self.observer = ephem.Observer()
+        self.observer.lat = lat
+        self.observer.lon = lon
+
+        # disable atmospheric reflection
+        self.observer.pressure = 0
+        self.observer.horizon = horizon
+
+        self.sun = ephem.Sun()
+
         self.satellite = ephem.readtle(*tle)
 
-    def _calculate_pass(self, start_datetime=None):
-        # what is pep8
-        try:
-            (
-                rise_time,
-                rise_azm,
-                max_alt_time,
-                max_alt,
-                set_time,
-                set_azm
-            ) = (
-                    self.observer.next_pass(
-                        self.satellite,
-                        start=ephem.Date(start_datetime)
-                    ) 
-                    if start_datetime is not None else
-                    self.observer.next_pass(
-                        self.satellite
-                    )
+    def get_next_passes(self, n=15, visible_only=False):
+        passes = []
+
+        self.observer.date = datetime.utcnow()
+
+        computed_pass = self.yield_next_pass()
+
+        for _ in range(n):
+            p = next(computed_pass)
+            passes.append(p)
+
+        if visible_only:
+            return filter(lambda p: p['visible'], passes)
+
+        return passes
+
+    def yield_next_pass(self):
+        """Yield next pass for observer/satellite"""
+
+        while True:
+            try:
+                next_pass = self.observer.next_pass(self.satellite)
+            except ephem.CircumpolarError:
+                # no passes for you!
+                logger.info(
+                    "Tried to calculate passes for circumpolar sat"
+                    "@ {}".format(self.observer)
                 )
-        except ephem.CircumpolarError as exc:
-            # no passes for you!
-            logger.info(
-                "Tried to calculate passes for circumpolar sat"
-                "@ {}".format(self.observer)
-            )
-            return None
+                raise
 
-        start_time = rise_time
-        
-        self.satellite.compute(rise_time)
-        
-        # we need light to hit the satellite
-        while self.satellite.eclipsed and not start_time > set_time:
-            start_time += ephem.second
-            self.satellite.compute(start_time)
-        
-        # we should be done
-        # if the sat is eclipsed the whole time, there is no pass
-        if start_time == set_time:
-            return None
+            _pass = EphemPass(*next_pass)
 
-        end_time = start_time
+            yield self.compute_pass(_pass)
 
-        highest_time = start_time
-        highest_alt = ephem.Degrees(0)
-        highest_azm = ephem.Degrees(0)
+            # advance 5 minutes after pass
+            self.observer.date = _pass.set_time + (5 * ephem.minute)
 
-        # calculate when light stops hitting the satellite
-        # also, calculate the highest spot on its pass
-        while not self.satellite.eclipsed and end_time < set_time:
-            end_time += ephem.second
-            self.observer.compute(end_time)
+    def compute_pass(self, _pass):
+        """_pass is an EphemPass
+        Computes visibility and formatting of the pass"""
+
+        visible = False
+        passing_time = _pass.rise_time
+
+        while passing_time < _pass.set_time:
+            passing_time += ephem.second
+            self.observer.date = passing_time
+
+            self.sun.compute(self.observer)
             self.satellite.compute(self.observer)
-            if self.satellite.alt > highest_alt:
-                highest_alt = self.satellite.alt
-                highest_azm = self.satellite.az
-                highest_time = end_time
 
-        # get the data for those times.
-        self.observer.compute(start_time)
+            if (
+                not self.satellite.eclipsed and
+                -18 < degrees(self.sun.alt) < -6
+            ):
+                visible = True
+                break
+
+        # set highest azimuth
+        self.observer.date = _pass.max_alt_time
         self.satellite.compute(self.observer)
-        start_azm, start_alt = self.satellite.az, self.satellite.alt
-        
-        self.observer.compute(end_time)
-        self.satellite.compute(self.observer)
-        end_azm, end_alt = self.satellite.az, self.satellite.alt
+        highest_az = self.satellite.az
 
-        # build a PassRow object
-        _pass = HA.PassRow(
-            ephem.localtime(start_time).date,
-            None, # we can't calculate magnitude
-            ephem.localtime(start_time),
-            start_alt,
-            start_az,
-            ephem.localtime(highest_time),
-            highest_alt,
-            highest_azm
-            ephem.localtime(end_time),
-            end_alt,
-            end_azm,
-            None
-        )
+        # todo: missing visible start/end/highest values
 
-        logger.debug("Correctly calculated a pass! {}".format(_pass))
+        return {
+            'start': {
+                'datetime': _pass.rise_time.datetime(),
+                'alt': degrees(self.observer.horizon),
+                'az': az_to_octant(_pass.rise_az)
+            },
+            'highest': {
+                'datetime': _pass.max_alt_time.datetime(),
+                'alt': degrees(_pass.max_alt),
+                'az': az_to_octant(highest_az)
+            },
+            'end': {
+                'datetime': _pass.set_time.datetime(),
+                'alt': degrees(self.observer.horizon),
+                'az': az_to_octant(_pass.set_az)
+            },
+            'visible': visible
+        }
 
-        return _pass
 
-    def get_next_passes():
-        passes = [self._calculate_pass()]
-        for _ in range(9):
-            passes.append(self._calculate_pass(passes[-1]))
+class TLE(object):
 
-        def az_to_octant(azimuth):
-            octants = [
-                'N', 'NE', 'E',
-                'SE', 'S', 'SW',
-                'W', 'NW'
-            ]
+    FEED_URL = "http://www.celestrak.com/NORAD/elements/stations.txt"
 
-            azm_centered = azimuth - ephem.pi/8
-            return octants[floor(16*azm_centered/ephem.pi)]
+    def __init__(self):
+        self.session = requests.Session()
 
-        def rad_to_deg(radians):
-            return 360*rad / ( 2*ephem.pi )
+    def update(self):
+        r = self.session.get(TLE.FEED_URL)
+        lines = [line.strip() for line in r.text.split('\n') if line]
 
-        def format_pass(_pass):
-            return {
-                'url': None,
-                'mag': _pass.mag,
-                'start'{
-                    'datetime': _pass.start_time,
-                    'alt': rad_to_deg(_pass.start_alt),
-                    'az': az_to_octant(_pass.start_az)
-                },
-                'highest'{
-                    'datetime': _pass.highest_time,
-                    'alt': rad_to_deg(_pass.highest_alt),
-                    'az': az_to_octant(_pass.highest_az)
-                },
-                'end'{
-                    'datetime': _pass.end_time,
-                    'alt': rad_to_deg(_pass.end_alt),
-                    'az': az_to_octant(_pass.end_az)
-                }
-            }
+        satellites = []
 
-        return map(format_pass, passes)
+        for i in range(0, len(lines), 3):
+            satellites.append(lines[i:i+3])
+
+        with open('tle.json', 'w') as f:
+            json.dump(satellites, f, indent=4)

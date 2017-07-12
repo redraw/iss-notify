@@ -1,10 +1,10 @@
 import re
 from datetime import datetime, timedelta
+from six.moves.urllib.parse import parse_qs
 
 import requests
 from collections import namedtuple
 from bs4 import BeautifulSoup
-from urlparse import parse_qs
 
 from utils import julian
 
@@ -44,8 +44,7 @@ class HeavensAbove:
 
         return filter(lambda p: p['start']['datetime'] > now, passes)
 
-    @staticmethod
-    def get_tle(satid=SatID.ISS):
+    def get_tle(self, satid=SatID.ISS):
         response = self.session.get(HeavensAbove.ORBIT_URL, params={
             'satId': satid
         })
@@ -94,7 +93,8 @@ class HeavensAbove:
                     'datetime': datetime.strptime("%s %s %s" % (p.date, p.end_time, year), "%d %b %X %Y"),
                     'alt': p.end_alt,
                     'az': p.end_az
-                }
+                },
+                'visible': True
             })
 
         return passes

@@ -3,3 +3,4 @@ redis
 bs4
 requests
 pyephem
+python-dotenv

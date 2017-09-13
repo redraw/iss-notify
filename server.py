@@ -1,5 +1,7 @@
 import bottle
-from bottle import Bottle, request, response
+from bottle import Bottle, request, response, static_file
+
+import settings
 from services import OneSignal
 from main import redis
 
@@ -44,7 +46,7 @@ def unsubscribe():
 
     device = OneSignal().get_device(player_id)
 
-    if location:
+    if device:
         location = device['tags'].get('location')
 
         if location:
@@ -59,6 +61,11 @@ def unsubscribe():
     return {
         'status': 'ok'
     }
+
+
+@app.get('/map')
+def map():
+    return static_file(settings.MAP_FILE, root='.')
 
 
 app.run(host='0.0.0.0', port=8000)

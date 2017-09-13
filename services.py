@@ -30,11 +30,6 @@ class OneSignal(object):
         response = self.session.post(OneSignal.NOTIFICATIONS_URL, data=json.dumps(payload))
         data = response.json()
 
-        if data.get('errors'):
-            invalid_player_ids = data['errors'].get('invalid_player_ids', [])
-            for player_id in invalid_player_ids:
-                redis.srem('iss:location:%s:players' % location, player_id)
-
         return response
 
     def send_pass_notification(self, location, data, schedule=False):
@@ -63,9 +58,19 @@ class OneSignal(object):
             payload.update({'send_after': start_dt.isoformat() })
 
         response = self.send_notification(**payload)
-        data = response.json()
 
-        logger.info("Notification sent: %s (recipients: %s)" % (location, data['recipients']))
+        if not response.ok:
+            logger.error('[onesignal error] %s' % response)
+            return
+
+        data = response.json()
+        recipients = data.get('recipients')
+        
+        if recipients > 0:
+            logger.info('[notification sent] %s (recipients: %s)' % (location, recipients))
+        else:
+            logger.info('[removing location] %s' % location)
+            redis.srem('iss:locations', location)
 
     def get_device(self, player_id):
         params = {"app_id": settings.ONESIGNAL_APP_ID}

@@ -5,3 +5,4 @@ huey
 redis
 bottle
 six
+folium
